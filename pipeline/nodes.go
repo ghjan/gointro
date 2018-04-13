@@ -1,12 +1,13 @@
 package pipeline
 
 import (
-	"math/rand"
 	"encoding/binary"
 	"io"
+	"math/rand"
 	"sort"
 )
 
+//ArraySource 一个数据源-数列
 func ArraySource(a ...int) <-chan int { //用户只能拿东西
 	out := make(chan int)
 	go func() {
@@ -18,6 +19,7 @@ func ArraySource(a ...int) <-chan int { //用户只能拿东西
 	return out
 }
 
+//InMemSort 内存中排序
 func InMemSort(in <-chan int) <-chan int {
 	out := make(chan int)
 	go func() {
@@ -38,7 +40,7 @@ func InMemSort(in <-chan int) <-chan int {
 	return out
 }
 
-//归并节点
+//Merge 归并节点
 func Merge(in1, in2 <-chan int) <-chan int {
 	out := make(chan int)
 	go func() {
@@ -58,17 +60,21 @@ func Merge(in1, in2 <-chan int) <-chan int {
 	return out
 }
 
-func ReaderSource(reader io.Reader) <-chan int {
+//ReaderSource 读取数据源  因为分块，保证不能超过chunkSize
+func ReaderSource(reader io.Reader, chunkSize int) <-chan int {
+
 	out := make(chan int)
 	go func() {
 		buffer := make([]byte, 8) //64bit int, 8个int
+		bytesRead := 0
 		for {
 			n, err := reader.Read(buffer)
+			bytesRead += n
 			if n > 0 {
 				v := int(binary.BigEndian.Uint64(buffer))
 				out <- v
 			}
-			if err != nil {
+			if err != nil || (chunkSize != -1 && bytesRead >= chunkSize) {
 				break
 			}
 		}
@@ -77,6 +83,7 @@ func ReaderSource(reader io.Reader) <-chan int {
 	return out
 }
 
+//WriterSink 把结果写入到某个地方
 func WriterSink(writer io.Writer, in <-chan int) {
 	for v := range in {
 		buffer := make([]byte, 8)
@@ -85,6 +92,7 @@ func WriterSink(writer io.Writer, in <-chan int) {
 	}
 }
 
+//RandomSource 一个数据源(输出count个随机数)
 func RandomSource(count int) <-chan int {
 	out := make(chan int)
 	go func() {
@@ -94,4 +102,13 @@ func RandomSource(count int) <-chan int {
 		close(out)
 	}()
 	return out
+}
+
+//MergeN 合并N个输入channel
+func MergeN(inputs ...<-chan int) <-chan int {
+	if len(inputs) == 1 {
+		return inputs[0]
+	}
+	m := len(inputs) / 2
+	return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))
 }
