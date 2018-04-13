@@ -3,11 +3,18 @@ package main
 import (
 	"github.com/ghjan/gointro/pipeline"
 	"fmt"
+	"os"
+	"log"
+	"bufio"
 )
+
+const filename = "small.in"
+const n = 100000000
 
 func main() {
 	//demo1()
-	demo2()
+	//demo2()
+	demo3()
 }
 func demo1() {
 	p := pipeline.ArraySource(3, 2, 6, 7, 4)
@@ -30,4 +37,35 @@ func demo2() {
 	for v := range p {
 		fmt.Println(v)
 	}
+}
+
+func demo3() {
+	file, err := os.Create(filename)
+	if err != nil {
+		//不知道怎么办 非产品 我们不需要处理他
+		log.Panic(err)
+	}
+	//最后执行，就算异常退出也执行。有点类似java的finally
+	defer file.Close()
+
+	p := pipeline.RandomSource(n)
+	writer := bufio.NewWriter(file)
+	pipeline.WriterSink(writer, p)
+	writer.Flush()
+	file, err = os.Open(filename)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer file.Close()
+	p = pipeline.ReaderSource(bufio.NewReader(file))
+	count := 0
+	for v := range p {
+		fmt.Println(v)
+
+		count++
+		if count > 100 {
+			break
+		}
+	}
+
 }
