@@ -13,7 +13,7 @@ var fileName = "large.in"
 var fileNameOutput = "large.out"
 
 const FILE_SIZE = 800000000
-const CHUNK_COUNT = 4
+const CHUNK_COUNT = 100
 
 func main() {
 	p := createPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
