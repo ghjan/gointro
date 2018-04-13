@@ -2,14 +2,26 @@ package pipeline
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math/rand"
 	"sort"
+	"time"
 )
+
+var startTime time.Time
+
+// channel加上buffer_size, 可以提高性能
+const BUFFER_SIZE = 1024
+
+//初始化开始时间（用于计时）
+func Init() {
+	startTime = time.Now()
+}
 
 //ArraySource 一个数据源-数列
 func ArraySource(a ...int) <-chan int { //用户只能拿东西
-	out := make(chan int)
+	out := make(chan int, BUFFER_SIZE)
 	go func() {
 		for _, v := range a {
 			out <- v
@@ -21,15 +33,16 @@ func ArraySource(a ...int) <-chan int { //用户只能拿东西
 
 //InMemSort 内存中排序
 func InMemSort(in <-chan int) <-chan int {
-	out := make(chan int)
+	out := make(chan int, BUFFER_SIZE)
 	go func() {
 		a := []int{}
 		for v := range in {
 			a = append(a, v)
 		}
-
+		fmt.Println("Read done:", time.Since(startTime))
 		//sort
 		sort.Ints(a)
+		fmt.Println("InMemSort done:", time.Since(startTime))
 
 		// Output
 		for _, v := range a {
@@ -42,7 +55,7 @@ func InMemSort(in <-chan int) <-chan int {
 
 //Merge 归并节点
 func Merge(in1, in2 <-chan int) <-chan int {
-	out := make(chan int)
+	out := make(chan int, BUFFER_SIZE)
 	go func() {
 		v1, ok1 := <-in1
 		v2, ok2 := <-in2
@@ -56,6 +69,8 @@ func Merge(in1, in2 <-chan int) <-chan int {
 			}
 		}
 		close(out)
+		fmt.Println("Merge done:", time.Since(startTime))
+
 	}()
 	return out
 }
@@ -63,7 +78,8 @@ func Merge(in1, in2 <-chan int) <-chan int {
 //ReaderSource 读取数据源  因为分块，保证不能超过chunkSize
 func ReaderSource(reader io.Reader, chunkSize int) <-chan int {
 
-	out := make(chan int)
+	// channel加上buffer_size, 可以提高性能
+	out := make(chan int, BUFFER_SIZE)
 	go func() {
 		buffer := make([]byte, 8) //64bit int, 8个int
 		bytesRead := 0
@@ -94,7 +110,7 @@ func WriterSink(writer io.Writer, in <-chan int) {
 
 //RandomSource 一个数据源(输出count个随机数)
 func RandomSource(count int) <-chan int {
-	out := make(chan int)
+	out := make(chan int, BUFFER_SIZE)
 	go func() {
 		for i := 0; i < count; i++ {
 			out <- rand.Int()

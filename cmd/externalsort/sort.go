@@ -9,19 +9,23 @@ import (
 	"github.com/ghjan/gointro/pipeline"
 )
 
-var fileName = "small.in"
-var fileNameOutput = "small.out"
+var fileName = "large.in"
+var fileNameOutput = "large.out"
+
+const FILE_SIZE = 800000000
+const CHUNK_COUNT = 4
 
 func main() {
-	p := createPipeline(fileName, 512, 4)
+	p := createPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
 	writeToFile(p, fileNameOutput)
-	printFile(fileNameOutput)
+	printFile(fileNameOutput, 100)
 }
 
 //createPipeline 创建流水线
 // @TODO return File *, which should be closed after process
 func createPipeline(filename string, fileSize, chunkCount int) <-chan int {
 	chunkSize := fileSize / chunkCount
+	pipeline.Init()
 	sortResults := []<-chan int{}
 	for i := 0; i < chunkCount; i++ {
 		file, err := os.Open(filename)
@@ -51,15 +55,21 @@ func writeToFile(p <-chan int, filename string) {
 }
 
 //printFile 打印文件内容
-func printFile(fileName string) {
+func printFile(fileName string, count int) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Panic(err)
 	}
+
 	defer file.Close()
 
 	p := pipeline.ReaderSource(file, -1)
+	i := 0
 	for v := range p {
+		i++
 		fmt.Println(v)
+		if i >= count {
+			break
+		}
 	}
 }
