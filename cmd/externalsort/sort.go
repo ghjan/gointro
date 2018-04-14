@@ -7,15 +7,29 @@ import (
 	"os"
 
 	"github.com/ghjan/gointro/pipeline"
+	"strconv"
+	"time"
 )
 
-var fileName = "large.in"
-var fileNameOutput = "large.out"
-
-const FILE_SIZE = 800000000
-const CHUNK_COUNT = 100
+var fileName = "small.in"
+var fileNameOutput = "small.out"
+//var fileName = "large.in"
+//var fileNameOutput = "large.out"
+const FILE_SIZE = 512 // 800000000
+const CHUNK_COUNT = 4
 
 func main() {
+	//demoSort()
+	//demoNetworkSort()
+	createNetworkPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
+	time.Sleep(time.Hour)
+}
+func demoNetworkSort() {
+	p := createNetworkPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
+	writeToFile(p, fileNameOutput)
+	printFile(fileNameOutput, 100)
+}
+func demoSort() {
 	p := createPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
 	writeToFile(p, fileNameOutput)
 	printFile(fileNameOutput, 100)
@@ -72,4 +86,27 @@ func printFile(fileName string, count int) {
 			break
 		}
 	}
+}
+
+func createNetworkPipeline(filename string, fileSize, chunkCount int) <-chan int {
+	chunkSize := fileSize / chunkCount
+	pipeline.Init()
+	sortAddr := []string{}
+	for i := 0; i < chunkCount; i++ {
+		file, err := os.Open(filename)
+		if err != nil {
+			panic(err)
+		}
+		file.Seek(int64(i*chunkSize), 0)
+		source := pipeline.ReaderSource(bufio.NewReader(file), chunkSize)
+		//sortResults = append(sortResults, pipeline.InMemSort(source))
+		addr := ":" + strconv.Itoa((7000 + i))
+		pipeline.NetworkSink(addr, pipeline.InMemSort(source))
+		sortAddr = append(sortAddr, addr)
+	}
+	sortResults := [] <-chan int{}
+	for _, addr := range sortAddr {
+		sortResults = append(sortResults, pipeline.NetworkSource(addr))
+	}
+	return pipeline.MergeN(sortResults...)
 }
