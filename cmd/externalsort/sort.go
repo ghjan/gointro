@@ -8,21 +8,20 @@ import (
 
 	"github.com/ghjan/gointro/pipeline"
 	"strconv"
-	"time"
 )
 
-var fileName = "small.in"
-var fileNameOutput = "small.out"
-//var fileName = "large.in"
-//var fileNameOutput = "large.out"
-const FILE_SIZE = 512 // 800000000
+//var fileName = "small.in"
+//var fileNameOutput = "small.out"
+var fileName = "large.in"
+var fileNameOutput = "large.out"
+
+const FILE_SIZE = 800000000
 const CHUNK_COUNT = 4
 
 func main() {
 	//demoSort()
 	//demoNetworkSort()
-	createNetworkPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
-	time.Sleep(time.Hour)
+	demoNetworkSort()
 }
 func demoNetworkSort() {
 	p := createNetworkPipeline(fileName, FILE_SIZE, CHUNK_COUNT)
