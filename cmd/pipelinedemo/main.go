@@ -57,7 +57,7 @@ func demo3() {
 		log.Panic(err)
 	}
 	defer file.Close()
-	p = pipeline.ReaderSource(bufio.NewReader(file))
+	p = pipeline.ReaderSource(bufio.NewReader(file),-1)
 	count := 0
 	for v := range p {
 		fmt.Println(v)
